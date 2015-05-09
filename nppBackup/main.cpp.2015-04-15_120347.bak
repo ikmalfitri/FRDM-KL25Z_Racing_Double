@@ -1,0 +1,230 @@
+#include "mbed.h"
+#include "TFC.h"
+
+#include "common.h"
+#include "Spices.h"
+
+#define MAX_CAMERA_THRESHOLD 500
+
+void TFC_TickerUpdate()
+{
+	int i;
+
+	for(i=0; i<NUM_TFC_TICKERS; i++)
+	{
+		if(TFC_Ticker[i]<0xFFFFFFFF)
+		{
+			TFC_Ticker[i]++;
+		}
+	}
+}
+
+void MainProgram()
+{
+	uint32_t i,t=0;
+	//uint32_t j;
+	float ReadPot0, ReadPot1;
+
+	//This Main Program will look at the middle 2 switch to select one of 4 modes.
+	switch((TFC_GetDIP_Switch()>>1)&0x03)
+	{
+		default:
+		
+		case 0:
+			//just tests the switches and LED's
+			if(TFC_PUSH_BUTTON_0_PRESSED)
+				TFC_BAT_LED0_ON;
+			else
+				TFC_BAT_LED0_OFF;
+
+			if(TFC_PUSH_BUTTON_1_PRESSED)
+				TFC_BAT_LED3_ON;
+			else
+				TFC_BAT_LED3_OFF;
+
+			/*if(TFC_GetDIP_Switch()&0x01)
+			TFC_BAT_LED1_ON;
+			else
+			TFC_BAT_LED1_OFF;
+
+			if(TFC_GetDIP_Switch()&0x08)
+			TFC_BAT_LED2_ON;
+			else
+			TFC_BAT_LED2_OFF;*/
+
+			//test the servo motor
+			TFC_HBRIDGE_DISABLE;
+			//if(TFC_HBRIDGE_ENABLED){
+			//	TFC_HBRIDGE_ENABLED=false;
+			//}
+
+			//just move the servos with the on-board potentiometers
+			if(TFC_Ticker[0]>=20) //every 40mS...
+			{
+				TFC_Ticker[0]=0;//reset the Ticker
+				//update the Servos
+				ReadPot0 = TFC_ReadPot(0);
+				ReadPot1 = TFC_ReadPot(1);
+				TFC_SetServo(0,ReadPot0);
+				TFC_SetServo(1,ReadPot1);
+				TERMINAL_PRINTF("Pot0 = %1.2f\r\n",ReadPot0);
+				//TERMINAL_PRINTF("Pot1=%1.2f\r\n",ReadPot1);
+			}
+			//Let's put a pattern on the LEDs
+			if(TFC_Ticker[1]>=125) //every 250mS...cycle through LEDs
+			{
+				TFC_Ticker[1]=0;
+				t++;
+				if(t>4)
+				{
+					t=0;
+				}
+				TFC_SetBatteryLED_Level(t);
+			}
+
+			TFC_SetMotorPWM(0,0); //Make sure motors are off
+			TFC_HBRIDGE_DISABLE;
+			
+			break;
+
+		case 1:
+			//test the motor
+			TFC_HBRIDGE_ENABLE;
+
+			ReadPot0=TFC_ReadPot(0);
+			ReadPot1=TFC_ReadPot(1);
+			TERMINAL_PRINTF("Pot0 = %1.2f\n",ReadPot0);
+			TERMINAL_PRINTF("Pot1 = %1.2f\n",ReadPot1);
+			TFC_SetMotorPWM(ReadPot0,ReadPot1);
+
+			//Let's put a pattern on the LEDs
+			if(TFC_Ticker[1]>=125)
+			{
+				TFC_Ticker[1]=0;
+				t++;
+				if(t>4)
+				{
+					t=0;
+				}
+				TFC_SetBatteryLED_Level(t);
+			}
+			
+			//test the Camera
+			if(TFC_Ticker[0]>10&&TFC_LineScanImageReady>0) //125=250ms,20=40ms,1000=2000ms...
+			{
+				TFC_Ticker[0]=0;
+				TFC_LineScanImageReady=0; //must reset to 0 after detecting non-zero
+
+				if(t==0)
+					t=4;
+				else
+					t--;
+
+				TFC_SetBatteryLED_Level(t);
+
+				for(i=0;i<128;i++){
+
+					//camera ONE (front connector)
+					if(TFC_LineScanImage0[i]<MAX_CAMERA_THRESHOLD)
+						TERMINAL_PRINTF("|");
+					else if(TFC_LineScanImage0[i]>MAX_CAMERA_THRESHOLD)
+						TERMINAL_PRINTF("_");
+					
+					if(i==127) //when last data reached put in line return
+						TERMINAL_PRINTF("\r\n");
+
+					/*camera TWO (back connector)
+					if(TFC_LineScanImage1[i]<MAX_CAMERA_THRESHOLD)
+						TERMINAL_PRINTF("|");
+					else if(TFC_LineScanImage1[i]>MAX_CAMERA_THRESHOLD)
+						TERMINAL_PRINTF("_");
+					
+					if(i==127) //when last data reached put in line return
+						TERMINAL_PRINTF("\r\n");*/
+					
+					/*TERMINAL_PRINTF("%X",TFC_LineScanImage0[i]);
+					if(i==127)
+					TERMINAL_PRINTF("\r\n",TFC_LineScanImage0[i]);
+					else
+					TERMINAL_PRINTF(",",TFC_LineScanImage0[i]);*/
+				}
+
+				/*for(i=0;i<8;i++) //print one line worth of data (128) from Camera0
+				{
+					for(j=0;j<16;j++)
+					{
+						*if(TFC_LineScanImage0[(i*16)+j]<MAX_CAMERA_THRESHOLD)
+						TERMINAL_PRINTF("|",TFC_LineScanImage0[(i*16)+j]);
+						else
+						TERMINAL_PRINTF("_",TFC_LineScanImage0[(i*16)+j]);
+
+						if((i==7)&&(j==15)) //when last data reached put in line return
+						TERMINAL_PRINTF("\r\n",TFC_LineScanImage0[(i*16)+j]);
+						else
+						TERMINAL_PRINTF("_",TFC_LineScanImage0[(i*16)+j]);*
+
+						TERMINAL_PRINTF("0x%X",TFC_LineScanImage0[(i*16)+j]);
+						//TERMINAL_PRINTF("%d",TFC_LineScanImage0[(i*16)+j]);
+
+						if((i==7)&&(j==15)) //when last data reached put in line return
+						TERMINAL_PRINTF("\r\n",TFC_LineScanImage0[(i*16)+j]);
+						else
+						TERMINAL_PRINTF(",",TFC_LineScanImage0[(i*16)+j]);
+
+					}
+					wait_ms(10);
+				}*/
+
+				/*for(i=0;i<8;i++) //print one line worth of data (128) from Camera1??
+				{
+					for(j=0;j<16;j++)
+					{
+						TERMINAL_PRINTF("0x%X",TFC_LineScanImage1[(i*16)+j]);
+
+						if((i==7)&&(j==15))//when last data reached put in line return
+						TERMINAL_PRINTF("\r\n",TFC_LineScanImage1[(i*16)+j]);
+						else
+						TERMINAL_PRINTF(",",TFC_LineScanImage1[(i*16)+j]);
+					}
+
+					wait_ms(10);
+				}*/
+
+			}
+		
+			break;
+
+		case 2: //race mode
+		
+			break;
+
+		case 3: //super race
+		
+			break;
+	} //end case
+}
+
+int main()
+{
+	//TERMINAL TYPE
+	PC.baud(115200);//work swith Excel and TeraTerm
+	//PC.baud(9600);//works with USBSerialMonitorLite: https://play.google.com/store/apps/details?id=jp.ksksue.app.terminal;doesn'twork>9600
+	TFC_TickerObj.attach_us(&TFC_TickerUpdate,2000);//update ticker array every 2mS (2000uS)
+	
+	TFC_Init();
+	
+	for(;;)
+	{
+		//TFC_Task must be called in your main loop. This keeps certain processing happy (I.E.Serial port queue check)
+		//TFC_Task();
+		//If DIP switch1 is high, then run MCP, else Demo program
+		TERMINAL_PRINTF("%X\r\n",TFC_GetDIP_Switch());
+		/*if(TFC_GetDIP_Switch() & 0x01)
+			//RunMCP
+			MasterControlProgram();
+		else
+			//RunMainProgram
+			MainProgram();*/
+	}//end of infinite for loop
+}
+

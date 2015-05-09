@@ -1,0 +1,86 @@
+Overview
+
+This program is an example program that uses the FRDM-TFC library to actually permit a car using the FDRM-TFC shield + FRDM-KL25Z to race around a center line track.
+
+Car Hookup
+
+Motors
+
+Code written assuming left motor hooked to B1(red)/B2(black) and right motor hooked to A1(red)/A2(black).
+Battery
+
+Be sure to hook positive (red) to 'Vbat' and negative (black) to 'Gnd'
+Steering Servo
+
+Servo must be hooked up with black wire innermost (away from LEDs).
+Also be sure to mount servo on chassis with wire coming out the right side of the car.
+Camera
+
+Camera must be hooked up with black wire towards LEDs on the shield board.
+Be sure to mount camera on tower with connector down towards the bottom.
+Potentiometers (Pots)
+
+Pots by default should have arrows pointing toward battery/motor hookup (for demo mods default).
+Car Hardware Controls
+
+DIP SWITCH CONTROLS:
+
+Switch 1: Controls whether running main racing program (ON) or Demo program (OFF). Function of other 3 switches depend on this first switch.
+RACING MODE (Switch 1 = ON)
+
+Switch 2: Logging frame camera data to RAM while racing. Enable (ON) or Disable (OFF).
+Switch 3: Risky / faster racing (ON); Conservative / slower race option (OFF). NOTE: Faster mode may cause car to fall off track. Needs tweaking...
+Switch 4: Enable Start Gate Stop (ON) or Disable (OFF). NOTE: May not actually stop at start gate. Needs tweaking...
+POTs 1,2 - controls nothing at the moment
+PUSHBUTTON A - START car race!
+PUSHBUTTON B - END CAR RACE / (while holding down when 'log frame data' active will also output terminal data gathered during race)
+LEDs 1,2 light when Track is found
+LEDs 0,3 light when Start Gate is Found
+DEMO MODE 0 (Switch 1 = OFF; Switch 2 = OFF, Switch 3 = OFF)
+
+PUSHBUTTON A - Light LED 0
+PUSHBUTTON B - Light LED 3
+DEMO MODE 1 (Switch 1 = OFF; Switch 2 = ON, Switch 3 = OFF)
+
+POT 1 - Controls Servo: CCW = left; CW = right
+DEMO MODE 2 (Switch 1 = OFF; Switch 2 = OFF, Switch 3 = ON)
+
+POT 1 - Controls speed of right wheel: CCW = reverse; CW = forward
+POT 2 - Controls speed of left wheel: CCW = reverse; CW = forward
+NOTE In this mode the high pitched whine heard is of the H-bridge being active. To disable whine, briefly put into demo mode 1 above.
+DEMO MODE 3 (Switch 1 = OFF; Switch 2 = ON, Switch 3 = ON)
+
+Outputs camera data captured to terminal in CSV format, once every second.
+Car Calibration
+
+Serial Terminal
+
+Download your favorite Terminal application (I use TeraTerm. Set it for 115200 baud, 8bit, none, 1bit.
+But first you have to be sure that Windows mbed serial driver has been installed: Windows serial config.
+Camera
+
+If you want to hook up a scope, here are the pins of the camera interface from left to right: ground, 3.3V, SI, CLK, Analog_Out.
+You want to hook up channel 1 between Analog_Out and Ground, channel 2 between SI and ground. SI can serve as your trigger.
+Alternatively if you only want to use one channel, you can only hook up to Analog_Out and use triggering on the same channel.
+Be sure to focus the camera properly. See demo video.
+Be sure to prevent light noise on camera: Avoid Light Noise
+More camera info
+Servo/Steering
+
+You will need to put the car into demo mode 1 and connect up a terminal to the serial port in order to get feedback on the values for your 
+particular servo as hooked up. Then change MAX_STEER_LEFT and MAX_STEER_RIGHT in Spices.cpp with these values to tell the program 
+how your servo is hooked up.
+Here's a video where values are output to LCD to make it easier: http://youtu.be/fp5gyfEMf50
+Speed Control
+
+This program does not have proper speed control but does modify the speed slightly based on recent error results from the camera. It also 
+modifies the differential speed to each wheel to have better control around curves.
+While debugging your car you may want to lower the speed. See the function SpeedControl in Spices.cpp. There you can change which speed 
+method you'd like to use. Currently is using value of 1, which gets maximum speed from TUNE_SPEED constant. Reduce to 0.4 or 0.5 when 
+debugging car around the car (mainly to minimize crash forces!).
+Strange Gotchas
+
+Glitchy Motors
+
+Apparently there is contention between TPM0_CH0 and OpenSDA micro that causes strange issues with Motors (PWM interference). 
+This will cause glitches in motor activty when hooked up to USB only: Found contention
